@@ -1,0 +1,81 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="card">
+  <h2>💰 Input Pembayaran SPP</h2>
+  {% if students|length == 0 %}
+    <p>Belum ada siswa aktif. Tambahkan siswa dahulu di tab Siswa.</p>
+  {% else %}
+  <form method="get" action="{{ url_for('input_spp') }}">
+    <div class="row">
+      <div>
+        <label>Siswa</label>
+        <select name="student_id" onchange="this.form.submit()">
+          {% for s in students %}
+            <option value="{{ s.id }}" {{ 'selected' if s.id==student_id }}>{{ s.no_akun }} - {{ s.nama }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div>
+        <label>Tahun</label>
+        <input type="number" name="tahun" value="{{ tahun }}" onchange="this.form.submit()">
+      </div>
+    </div>
+  </form>
+
+  <form method="post" action="{{ url_for('input_spp_save') }}" style="margin-top:10px">
+    <input type="hidden" name="student_id" value="{{ student_id }}">
+    <div class="row">
+      <div>
+        <label>Bulan</label>
+        <select name="bulan">
+          {% for m in MONTHS %}
+            <option value="{{ loop.index }}">{{ m }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div><label>Tahun</label><input name="tahun" type="number" value="{{ tahun }}"></div>
+      <div><label>Jumlah Iuran</label><input name="jumlah" type="number" value="{{ jumlah_default }}"></div>
+    </div>
+    <div class="row">
+      <div><label>Tgl Bayar</label><input name="tgl_bayar" type="date" value="{{ today }}"></div>
+      <div>
+        <label>TTD (Penerima)</label>
+        <input name="ttd" list="daftarPenerima" placeholder="pilih atau ketik nama penerima" autocomplete="off">
+        <datalist id="daftarPenerima">
+          {% for r in recipients %}
+            <option value="{{ r.nama }}">{{ r.jabatan or '' }}</option>
+          {% endfor %}
+        </datalist>
+      </div>
+      <div><label>Stempel</label><select name="stempel"><option>Ya</option><option>Belum</option></select></div>
+    </div>
+    <div style="margin-top:8px">
+      <button class="btn yellow" type="submit">Simpan Pembayaran</button>
+      <a class="btn small" href="{{ url_for('penerima_list') }}" style="margin-left:6px">Kelola Daftar Penerima</a>
+    </div>
+  </form>
+  {% endif %}
+</div>
+
+{% if selected_student %}
+<div class="card">
+  <h2>📋 Kartu SPP Bulanan — {{ selected_student.nama }} ({{ tahun }})</h2>
+  <div class="tbl-wrap">
+    <table>
+      <thead><tr><th>No</th><th>Bulan</th><th>Iuran</th><th>TTD</th><th>Stempel</th><th>Status</th></tr></thead>
+      <tbody>
+        {% for k in kartu %}
+        <tr>
+          <td>{{ k.no }}</td><td>{{ k.bulan }}</td>
+          <td>{{ k.payment.jumlah|rupiah if k.payment else '' }}</td>
+          <td>{{ k.payment.ttd if k.payment else '' }}</td>
+          <td>{{ k.payment.stempel if k.payment else '' }}</td>
+          <td>{% if k.payment %}<span class="badge ok">Lunas</span>{% else %}<span class="badge no">Belum</span>{% endif %}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endif %}
+{% endblock %}

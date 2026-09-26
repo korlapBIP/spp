@@ -1,0 +1,39 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="card">
+  <h2>📦 Kelola Paket SPP</h2>
+  <form method="post" action="{{ url_for('paket_save') }}">
+    <input type="hidden" name="pid" value="{{ edit_package.id if edit_package else '' }}">
+    <div class="row">
+      <div><label>Nama Paket</label><input name="name" placeholder="cth: 3x seminggu" required value="{{ edit_package.name if edit_package else '' }}"></div>
+      <div><label>Harga / bulan</label><input name="price" type="number" required value="{{ edit_package.price if edit_package else '' }}"></div>
+    </div>
+    <div style="margin-top:8px">
+      <button class="btn yellow" type="submit">Simpan Paket</button>
+      <a class="btn" href="{{ url_for('paket_list') }}">Batal</a>
+    </div>
+  </form>
+</div>
+<div class="card">
+  <h2>Daftar Paket</h2>
+  <div class="tbl-wrap">
+    <table>
+      <thead><tr><th>Nama</th><th>Harga</th><th></th></tr></thead>
+      <tbody>
+        {% for p in packages %}
+        <tr>
+          <td>{{ p.name }}</td>
+          <td>{{ p.price|rupiah }}</td>
+          <td>
+            <a class="btn small" href="{{ url_for('paket_list', edit=p.id) }}">Edit</a>
+            <form method="post" action="{{ url_for('paket_hapus', package_id=p.id) }}" style="display:inline" onsubmit="return confirm('Hapus paket ini? Siswa yang memakainya akan kehilangan referensi paket.');">
+              <button class="btn small red" type="submit">Hapus</button>
+            </form>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

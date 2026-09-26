@@ -1,0 +1,42 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="card">
+  <h2>➕ {{ 'Edit' if edit_recipient else 'Tambah' }} Penerima Iuran SPP</h2>
+  <form method="post" action="{{ url_for('penerima_save') }}">
+    <input type="hidden" name="rid" value="{{ edit_recipient.id if edit_recipient else '' }}">
+    <div class="row">
+      <div><label>Nama Penerima</label><input name="nama" required value="{{ edit_recipient.nama if edit_recipient else '' }}"></div>
+      <div><label>Jabatan / Keterangan</label><input name="jabatan" placeholder="cth: Admin, Bendahara" value="{{ edit_recipient.jabatan if edit_recipient else '' }}"></div>
+    </div>
+    <div style="margin-top:8px">
+      <button class="btn yellow" type="submit">Simpan</button>
+      <a class="btn" href="{{ url_for('penerima_list') }}">Batal</a>
+    </div>
+  </form>
+</div>
+<div class="card">
+  <h2>🧾 Daftar Penerima Iuran SPP</h2>
+  <p style="font-size:.8rem;color:#666;margin-top:-4px">Daftar ini akan muncul sebagai saran nama di kolom TTD saat Input SPP.</p>
+  <div class="tbl-wrap">
+    <table>
+      <thead><tr><th>Nama</th><th>Jabatan</th><th></th></tr></thead>
+      <tbody>
+        {% if recipients|length == 0 %}
+          <tr><td colspan="3">Belum ada penerima. Tambahkan di atas.</td></tr>
+        {% endif %}
+        {% for r in recipients %}
+        <tr>
+          <td>{{ r.nama }}</td><td>{{ r.jabatan or '-' }}</td>
+          <td>
+            <a class="btn small" href="{{ url_for('penerima_list', edit=r.id) }}">Edit</a>
+            <form method="post" action="{{ url_for('penerima_hapus', recipient_id=r.id) }}" style="display:inline" onsubmit="return confirm('Hapus penerima ini?');">
+              <button class="btn small red" type="submit">Hapus</button>
+            </form>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="card">
+  <h2>📊 Ringkasan</h2>
+  <div class="stat">
+    <div><b>{{ total_siswa_aktif }}</b>Siswa Aktif</div>
+    <div><b>{{ sudah_bayar }}</b>Sudah Bayar Bulan Ini</div>
+    <div><b>{{ belum_bayar|length }}</b>Belum Bayar</div>
+    <div><b>{{ total_bulan_ini|rupiah }}</b>Iuran Bulan Ini</div>
+  </div>
+</div>
+<div class="card">
+  <h2>🔔 Reminder Tunggakan SPP</h2>
+  {% if belum_bayar|length == 0 %}
+    <p>Tidak ada tunggakan. 🎉</p>
+  {% else %}
+    {% for s in belum_bayar %}
+      <div class="remind">{{ s.nama }} (No.Akun {{ s.no_akun }}) — jatuh tempo tgl {{ s.jatuh_tempo }} — <b>belum bayar SPP {{ bulan_sekarang }} {{ tahun_sekarang }}</b></div>
+    {% endfor %}
+  {% endif %}
+</div>
+{% endblock %}

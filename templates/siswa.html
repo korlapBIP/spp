@@ -1,0 +1,60 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="card">
+  <h2>➕ {{ 'Edit' if edit_student else 'Tambah' }} Siswa</h2>
+  <form method="post" action="{{ url_for('siswa_save') }}">
+    <input type="hidden" name="sid" value="{{ edit_student.id if edit_student else '' }}">
+    <div class="row">
+      <div><label>No Akun</label><input name="no_akun" required value="{{ edit_student.no_akun if edit_student else '' }}"></div>
+      <div><label>Nama</label><input name="nama" required value="{{ edit_student.nama if edit_student else '' }}"></div>
+      <div><label>Status</label>
+        <select name="status">
+          <option {{ 'selected' if edit_student and edit_student.status=='Aktif' }}>Aktif</option>
+          <option {{ 'selected' if edit_student and edit_student.status=='Nonaktif' }}>Nonaktif</option>
+        </select>
+      </div>
+    </div>
+    <div class="row">
+      <div><label>Mulai</label><input type="date" name="mulai" value="{{ edit_student.mulai if edit_student else '' }}"></div>
+      <div><label>Akhir</label><input type="date" name="akhir" value="{{ edit_student.akhir if edit_student else '' }}"></div>
+      <div><label>Paket</label>
+        <select name="paket_id">
+          <option value="">-Pilih-</option>
+          {% for p in packages %}
+            <option value="{{ p.id }}" {{ 'selected' if edit_student and edit_student.paket_id==p.id }}>{{ p.name }} - Rp {{ '{:,}'.format(p.price).replace(',', '.') }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div><label>Tgl Jatuh Tempo (1-28)</label><input type="number" name="jatuh_tempo" min="1" max="28" value="{{ edit_student.jatuh_tempo if edit_student else 10 }}"></div>
+    </div>
+    <div style="margin-top:8px">
+      <button class="btn yellow" type="submit">Simpan</button>
+      <a class="btn" href="{{ url_for('siswa_list') }}">Batal</a>
+    </div>
+  </form>
+</div>
+<div class="card">
+  <h2>👦 Daftar Siswa</h2>
+  <div class="tbl-wrap">
+    <table>
+      <thead><tr><th>No Akun</th><th>Nama</th><th>Status</th><th>Paket</th><th>Iuran</th><th>Jatuh Tempo</th><th></th></tr></thead>
+      <tbody>
+        {% for s in students %}
+        <tr>
+          <td>{{ s.no_akun }}</td><td>{{ s.nama }}</td><td>{{ s.status }}</td>
+          <td>{{ s.paket_name or '-' }}</td>
+          <td>{{ ('Rp ' + '{:,}'.format(s.paket_price).replace(',', '.')) if s.paket_price is not none else '-' }}</td>
+          <td>{{ s.jatuh_tempo }}</td>
+          <td>
+            <a class="btn small" href="{{ url_for('siswa_list', edit=s.id) }}">Edit</a>
+            <form method="post" action="{{ url_for('siswa_hapus', student_id=s.id) }}" style="display:inline" onsubmit="return confirm('Hapus siswa ini? Riwayat pembayarannya akan ikut terhapus.');">
+              <button class="btn small red" type="submit">Hapus</button>
+            </form>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

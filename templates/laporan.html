@@ -1,0 +1,126 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="card">
+  <h2>📈 Laporan Keuangan per Tahun</h2>
+  <form method="get" action="{{ url_for('laporan') }}">
+    <input type="hidden" name="siswa_id" value="{{ siswa_id or '' }}">
+    <input type="hidden" name="lbulan" value="{{ lbulan }}">
+    <input type="hidden" name="ltahun" value="{{ ltahun }}">
+    <div class="row">
+      <div>
+        <label>Tahun</label>
+        <select name="tahun" onchange="this.form.submit()">
+          {% for y in years %}
+            <option value="{{ y }}" {{ 'selected' if y==tahun }}>{{ y }}</option>
+          {% endfor %}
+        </select>
+      </div>
+    </div>
+  </form>
+  <div class="tbl-wrap" style="margin-top:10px">
+    <table>
+      <thead><tr><th>Bulan</th><th>Jml Bayar</th><th>Total</th></tr></thead>
+      <tbody>
+        {% for r in rows %}
+        <tr><td>{{ r.bulan }}</td><td>{{ r.jumlah_bayar }}</td><td>{{ r.total|rupiah }}</td></tr>
+        {% endfor %}
+      </tbody>
+      <tfoot><tr><th colspan="2">Total Tahun {{ tahun }}</th><th>{{ grand_total|rupiah }}</th></tr></tfoot>
+    </table>
+  </div>
+</div>
+
+<div class="card">
+  <h2>👤 Laporan atas Nama Siswa</h2>
+  {% if all_students|length == 0 %}
+    <p>Belum ada data siswa.</p>
+  {% else %}
+  <form method="get" action="{{ url_for('laporan') }}">
+    <input type="hidden" name="tahun" value="{{ tahun }}">
+    <input type="hidden" name="lbulan" value="{{ lbulan }}">
+    <input type="hidden" name="ltahun" value="{{ ltahun }}">
+    <div class="row">
+      <div>
+        <label>Pilih Siswa</label>
+        <select name="siswa_id" onchange="this.form.submit()">
+          {% for s in all_students %}
+            <option value="{{ s.id }}" {{ 'selected' if s.id==siswa_id }}>{{ s.no_akun }} - {{ s.nama }}</option>
+          {% endfor %}
+        </select>
+      </div>
+    </div>
+  </form>
+  <div class="tbl-wrap" style="margin-top:10px">
+    <table>
+      <thead><tr><th>Bulan</th><th>Tahun</th><th>Jumlah</th><th>Tgl Bayar</th><th>TTD</th><th>Stempel</th></tr></thead>
+      <tbody>
+        {% if riwayat_siswa|length == 0 %}
+          <tr><td colspan="6">Belum ada riwayat pembayaran untuk siswa ini.</td></tr>
+        {% endif %}
+        {% for r in riwayat_siswa %}
+        <tr>
+          <td>{{ r.bulan }}</td><td>{{ r.tahun }}</td><td>{{ r.jumlah|rupiah }}</td>
+          <td>{{ r.tgl_bayar or '-' }}</td><td>{{ r.ttd or '-' }}</td><td>{{ r.stempel or '-' }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+      <tfoot><tr><th colspan="2">Total Dibayar {{ siswa_terpilih.nama if siswa_terpilih }}</th><th colspan="4">{{ total_siswa|rupiah }}</th></tr></tfoot>
+    </table>
+  </div>
+  {% endif %}
+</div>
+
+<div class="card">
+  <h2>🗓️ Laporan atas Nama Bulan</h2>
+  <form method="get" action="{{ url_for('laporan') }}">
+    <input type="hidden" name="tahun" value="{{ tahun }}">
+    <input type="hidden" name="siswa_id" value="{{ siswa_id or '' }}">
+    <div class="row">
+      <div>
+        <label>Bulan</label>
+        <select name="lbulan" onchange="this.form.submit()">
+          {% for m in MONTHS %}
+            <option value="{{ loop.index }}" {{ 'selected' if loop.index==lbulan }}>{{ m }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div>
+        <label>Tahun</label>
+        <input type="number" name="ltahun" value="{{ ltahun }}" onchange="this.form.submit()">
+      </div>
+    </div>
+  </form>
+  <div class="stat" style="margin-top:10px">
+    <div><b>{{ status_bulan|length }}</b>Siswa Aktif</div>
+    <div><b>{{ lunas_count }}</b>Sudah Bayar</div>
+    <div><b>{{ status_bulan|length - lunas_count }}</b>Belum Bayar</div>
+    <div><b>{{ total_bulan_terpilih|rupiah }}</b>Total Terkumpul</div>
+  </div>
+  <div class="tbl-wrap">
+    <table>
+      <thead><tr><th>No Akun</th><th>Nama</th><th>Jumlah</th><th>Tgl Bayar</th><th>Status</th></tr></thead>
+      <tbody>
+        {% if status_bulan|length == 0 %}
+          <tr><td colspan="5">Belum ada siswa aktif.</td></tr>
+        {% endif %}
+        {% for r in status_bulan %}
+        <tr>
+          <td>{{ r.no_akun }}</td><td>{{ r.nama }}</td>
+          <td>{{ r.jumlah|rupiah if r.jumlah is not none else '-' }}</td>
+          <td>{{ r.tgl_bayar or '-' }}</td>
+          <td>{% if r.status=='Lunas' %}<span class="badge ok">Lunas</span>{% else %}<span class="badge no">Belum</span>{% endif %}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<div class="card">
+  <h2>⬇️ Export Data</h2>
+  <div style="display:flex;gap:8px;flex-wrap:wrap">
+    <a class="btn" href="{{ url_for('export_csv') }}">⬇️ Export Pembayaran (CSV)</a>
+    <a class="btn" href="{{ url_for('export_json') }}">⬇️ Export Semua Data (JSON)</a>
+  </div>
+</div>
+{% endblock %}
