@@ -22,7 +22,7 @@ import database as db
 
 app = Flask(__name__)
 # Di server produksi, atur SECRET_KEY lewat environment variable, jangan hardcode.
-app.secret_key = os.environ.get("SECRET_KEY", "spp-omahbocil-secret-key-ganti-ini")
+app.secret_key = os.environ.get("SECRET_KEY", "dev-only-key")
 
 MONTHS = ["Januari", "Februari", "Maret", "April", "Mei", "Juni", "Juli",
           "Agustus", "September", "Oktober", "November", "Desember"]
@@ -559,4 +559,5 @@ def riwayat():
 
 
 if __name__ == "__main__":
-    app.run(debug=True)
+    port = int(os.environ.get("PORT", 5000))
+    app.run(host="0.0.0.0", port=port, debug=False)
