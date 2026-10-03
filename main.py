@@ -1,5 +1,5 @@
 """
-main.py
+app.py
 Aplikasi web SPP Omah Bocil — Flask + SQLite.
 Jalankan dengan: python main.py
 Lalu buka http://127.0.0.1:5000 di browser.
