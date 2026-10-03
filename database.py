@@ -4,6 +4,7 @@ Lapisan akses data (SQLite) untuk aplikasi SPP Omah Bocil.
 Semua fungsi CRUD untuk tabel: students, packages, payments.
 """
 
+import re
 import sqlite3
 from contextlib import contextmanager
 
@@ -86,6 +87,12 @@ def init_db():
         existing_cols = {row["name"] for row in cur.fetchall()}
         if "foto" not in existing_cols:
             cur.execute("ALTER TABLE students ADD COLUMN foto TEXT")
+        if "asal_sekolah" not in existing_cols:
+            cur.execute("ALTER TABLE students ADD COLUMN asal_sekolah TEXT")
+        if "kelas" not in existing_cols:
+            cur.execute("ALTER TABLE students ADD COLUMN kelas TEXT")
+        if "tahun_lahir" not in existing_cols:
+            cur.execute("ALTER TABLE students ADD COLUMN tahun_lahir INTEGER")
 
 
 # ---------------- PACKAGES ----------------
@@ -160,11 +167,13 @@ def find_student_by_no_akun(no_akun, exclude_id=None):
 def add_student(data):
     with get_cursor(commit=True) as cur:
         cur.execute("""
-            INSERT INTO students (no_akun, nama, status, mulai, akhir, paket_id, jatuh_tempo, foto)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            INSERT INTO students (no_akun, nama, status, mulai, akhir, paket_id, jatuh_tempo, foto,
+                                   asal_sekolah, kelas, tahun_lahir)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         """, (data["no_akun"], data["nama"], data["status"], data.get("mulai"),
               data.get("akhir"), data.get("paket_id") or None, data["jatuh_tempo"],
-              data.get("foto")))
+              data.get("foto"), data.get("asal_sekolah"), data.get("kelas"),
+              data.get("tahun_lahir")))
         return cur.lastrowid
 
 
@@ -172,18 +181,39 @@ def update_student(student_id, data):
     with get_cursor(commit=True) as cur:
         if data.get("foto") is not None:
             cur.execute("""
-                UPDATE students SET no_akun=?, nama=?, status=?, mulai=?, akhir=?, paket_id=?, jatuh_tempo=?, foto=?
+                UPDATE students SET no_akun=?, nama=?, status=?, mulai=?, akhir=?, paket_id=?, jatuh_tempo=?, foto=?,
+                                     asal_sekolah=?, kelas=?, tahun_lahir=?
                 WHERE id = ?
             """, (data["no_akun"], data["nama"], data["status"], data.get("mulai"),
                   data.get("akhir"), data.get("paket_id") or None, data["jatuh_tempo"],
-                  data.get("foto"), student_id))
+                  data.get("foto"), data.get("asal_sekolah"), data.get("kelas"),
+                  data.get("tahun_lahir"), student_id))
         else:
             # foto tidak diganti, pertahankan foto lama
             cur.execute("""
-                UPDATE students SET no_akun=?, nama=?, status=?, mulai=?, akhir=?, paket_id=?, jatuh_tempo=?
+                UPDATE students SET no_akun=?, nama=?, status=?, mulai=?, akhir=?, paket_id=?, jatuh_tempo=?,
+                                     asal_sekolah=?, kelas=?, tahun_lahir=?
                 WHERE id = ?
             """, (data["no_akun"], data["nama"], data["status"], data.get("mulai"),
-                  data.get("akhir"), data.get("paket_id") or None, data["jatuh_tempo"], student_id))
+                  data.get("akhir"), data.get("paket_id") or None, data["jatuh_tempo"],
+                  data.get("asal_sekolah"), data.get("kelas"), data.get("tahun_lahir"), student_id))
+
+
+def get_next_no_akun(prefix="B", pad=3):
+    """Hasilkan no akun berikutnya, format B001, B002, dst.
+    Hanya melihat akun berformat prefix+angka; akun format lain diabaikan."""
+    import re
+    with get_cursor() as cur:
+        cur.execute("SELECT no_akun FROM students")
+        rows = cur.fetchall()
+    max_num = 0
+    pattern = re.compile(rf"^{re.escape(prefix)}(\d+)$")
+    for r in rows:
+        m = pattern.match((r["no_akun"] or "").strip())
+        if m:
+            max_num = max(max_num, int(m.group(1)))
+    next_num = max_num + 1
+    return f"{prefix}{str(next_num).zfill(pad)}"
 
 
 def delete_student(student_id):

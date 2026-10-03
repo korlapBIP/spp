@@ -5,7 +5,7 @@
   <form method="post" action="{{ url_for('siswa_save') }}" enctype="multipart/form-data">
     <input type="hidden" name="sid" value="{{ edit_student.id if edit_student else '' }}">
     <div class="row">
-      <div><label>No Akun</label><input name="no_akun" required value="{{ edit_student.no_akun if edit_student else '' }}"></div>
+      <div><label>No Akun</label><input name="no_akun" required value="{{ edit_student.no_akun if edit_student else (next_no_akun or '') }}"></div>
       <div><label>Nama</label><input name="nama" required value="{{ edit_student.nama if edit_student else '' }}"></div>
       <div><label>Status</label>
         <select name="status">
@@ -15,8 +15,14 @@
       </div>
     </div>
     <div class="row">
-      <div><label>Mulai</label><input type="date" name="mulai" value="{{ edit_student.mulai if edit_student else '' }}"></div>
-      <div><label>Akhir</label><input type="date" name="akhir" value="{{ edit_student.akhir if edit_student else '' }}"></div>
+      <div>
+        <label>Mulai (dd-mm-yyyy)</label>
+        <input name="mulai" class="tgl-mask" placeholder="dd-mm-yyyy" pattern="\d{2}-\d{2}-\d{4}" maxlength="10" value="{{ edit_student.mulai if edit_student else '' }}">
+      </div>
+      <div>
+        <label>Akhir (dd-mm-yyyy)</label>
+        <input name="akhir" class="tgl-mask" placeholder="dd-mm-yyyy" pattern="\d{2}-\d{2}-\d{4}" maxlength="10" value="{{ edit_student.akhir if edit_student else '' }}">
+      </div>
       <div><label>Paket</label>
         <select name="paket_id">
           <option value="">-Pilih-</option>
@@ -28,6 +34,18 @@
       <div><label>Tgl Jatuh Tempo (1-28)</label><input type="number" name="jatuh_tempo" min="1" max="28" value="{{ edit_student.jatuh_tempo if edit_student else 10 }}"></div>
     </div>
     <div class="row" style="margin-top:8px">
+      <div><label>Asal Sekolah</label><input name="asal_sekolah" value="{{ edit_student.asal_sekolah if edit_student else '' }}"></div>
+      <div><label>Kelas</label><input name="kelas" value="{{ edit_student.kelas if edit_student else '' }}"></div>
+      <div>
+        <label>Tahun Lahir</label>
+        <input type="number" name="tahun_lahir" id="tahunLahir" placeholder="cth: 2015" min="1990" max="{{ today_year }}" value="{{ edit_student.tahun_lahir if edit_student else '' }}">
+      </div>
+      <div>
+        <label>Usia Saat Ini</label>
+        <input type="text" id="usiaTampil" disabled placeholder="otomatis dari Tahun Lahir" value="{{ (edit_student.tahun_lahir and (today_year - edit_student.tahun_lahir)) if edit_student and edit_student.tahun_lahir else '' }}">
+      </div>
+    </div>
+    <div class="row" style="margin-top:8px">
       <div>
         <label>Foto Siswa {{ '(kosongkan jika tidak diganti)' if edit_student else '(opsional)' }}</label>
         <input type="file" name="foto" accept="image/png,image/jpeg,image/gif,image/webp">
@@ -35,7 +53,7 @@
       {% if edit_student and edit_student.foto %}
       <div style="flex:0 0 auto">
         <label>Foto saat ini</label>
-        <img src="{{ url_for('static', filename='uploads/siswa/' + edit_student.foto) }}" alt="Foto {{ edit_student.nama }}" style="height:64px;width:64px;object-fit:cover;border-radius:8px;border:1.5px solid var(--line)">
+        <img class="zoom-foto" src="{{ url_for('static', filename='uploads/siswa/' + edit_student.foto) }}" alt="Foto {{ edit_student.nama }}" style="height:64px;width:64px;object-fit:cover;border-radius:8px;border:1.5px solid var(--line)">
       </div>
       {% endif %}
     </div>
@@ -49,22 +67,25 @@
   <h2>👦 Daftar Siswa</h2>
   <div class="tbl-wrap">
     <table>
-      <thead><tr><th>Foto</th><th>No Akun</th><th>Nama</th><th>Status</th><th>Paket</th><th>Iuran</th><th>Jatuh Tempo</th><th></th></tr></thead>
+      <thead><tr><th>Foto</th><th>No Akun</th><th>Nama</th><th>Kelas</th><th>Usia</th><th>Status</th><th>Paket</th><th>Iuran</th><th>Jatuh Tempo</th><th></th></tr></thead>
       <tbody>
         {% for s in students %}
         <tr>
           <td>
             {% if s.foto %}
-              <img src="{{ url_for('static', filename='uploads/siswa/' + s.foto) }}" alt="Foto {{ s.nama }}" style="height:36px;width:36px;object-fit:cover;border-radius:50%;border:1.5px solid var(--line)">
+              <img class="zoom-foto" src="{{ url_for('static', filename='uploads/siswa/' + s.foto) }}" alt="Foto {{ s.nama }}" style="height:36px;width:36px;object-fit:cover;border-radius:50%;border:1.5px solid var(--line)">
             {% else %}
               <span style="display:inline-flex;align-items:center;justify-content:center;height:36px;width:36px;border-radius:50%;background:var(--bg);color:#9ab;font-size:.9rem">👤</span>
             {% endif %}
           </td>
-          <td>{{ s.no_akun }}</td><td>{{ s.nama }}</td><td>{{ s.status }}</td>
+          <td>{{ s.no_akun }}</td><td>{{ s.nama }}</td>
+          <td>{{ s.kelas or '-' }}</td>
+          <td>{{ s.usia ~ ' th' if s.usia else '-' }}</td>
+          <td>{{ s.status }}</td>
           <td>{{ s.paket_name or '-' }}</td>
           <td>{{ ('Rp ' + '{:,}'.format(s.paket_price).replace(',', '.')) if s.paket_price is not none else '-' }}</td>
           <td>{{ s.jatuh_tempo }}</td>
-          <td>
+          <td style="white-space:nowrap">
             <a class="btn small" href="{{ url_for('siswa_list', edit=s.id) }}">Edit</a>
             <form method="post" action="{{ url_for('siswa_hapus', student_id=s.id) }}" style="display:inline" onsubmit="return confirm('Hapus siswa ini? Riwayat pembayarannya akan ikut terhapus.');">
               <button class="btn small red" type="submit">Hapus</button>
@@ -76,4 +97,29 @@
     </table>
   </div>
 </div>
+<script>
+// Auto-format dd-mm-yyyy saat mengetik
+document.querySelectorAll('.tgl-mask').forEach(function(el){
+  el.addEventListener('input', function(e){
+    let v = e.target.value.replace(/[^\d]/g, '').slice(0, 8);
+    if (v.length > 4) v = v.slice(0,2) + '-' + v.slice(2,4) + '-' + v.slice(4);
+    else if (v.length > 2) v = v.slice(0,2) + '-' + v.slice(2);
+    e.target.value = v;
+  });
+});
+// Hitung usia otomatis dari Tahun Lahir
+var tahunLahirEl = document.getElementById('tahunLahir');
+var usiaEl = document.getElementById('usiaTampil');
+if (tahunLahirEl) {
+  tahunLahirEl.addEventListener('input', function(){
+    var tl = parseInt(tahunLahirEl.value, 10);
+    var sekarang = {{ today_year }};
+    if (tl && tl > 1900 && tl <= sekarang) {
+      usiaEl.value = (sekarang - tl) + ' tahun';
+    } else {
+      usiaEl.value = '';
+    }
+  });
+}
+</script>
 {% endblock %}

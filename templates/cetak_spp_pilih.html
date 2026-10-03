@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="card">
+  <h2>🖨️ Cetak Kartu SPP</h2>
+  {% if students|length == 0 %}
+    <p>Belum ada data siswa. Tambahkan siswa dahulu di tab Siswa.</p>
+  {% else %}
+  <p style="font-size:.85rem;color:#555;margin-top:-4px">Pilih siswa dan tahun, lalu kartu SPP akan tampil di tab baru siap untuk di-print atau disimpan sebagai PDF.</p>
+  <form method="get" action="{{ url_for('cetak_spp_cetak') }}" target="_blank">
+    <div class="row">
+      <div>
+        <label>Siswa</label>
+        <select name="student_id" required>
+          {% for s in students %}
+            <option value="{{ s.id }}" {{ 'selected' if s.id==student_id }}>{{ s.no_akun }} - {{ s.nama }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div>
+        <label>Tahun</label>
+        <input type="number" name="tahun" value="{{ tahun }}">
+      </div>
+    </div>
+    <div style="margin-top:10px">
+      <button class="btn yellow" type="submit">🖨️ Cetak Kartu SPP</button>
+    </div>
+  </form>
+  {% endif %}
+</div>
+{% endblock %}

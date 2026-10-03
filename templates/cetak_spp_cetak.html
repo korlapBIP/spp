@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Kartu SPP — {{ siswa.nama }} ({{ tahun }})</title>
+<style>
+  :root{--navy:#173d7a;--yellow:#f6c445;--blue:#2196d8;--line:#dbe8f4;--fg:#123}
+  *{box-sizing:border-box}
+  body{font-family:-apple-system,Segoe UI,Roboto,Arial,sans-serif;background:#f4f8fc;color:var(--fg);margin:0;padding:18px}
+  .kartu{max-width:760px;margin:0 auto 24px;background:#fff;border:3px solid var(--navy);border-radius:16px;padding:20px}
+  .print-btn{display:block;max-width:760px;margin:0 auto 14px}
+  .kartu-top{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap}
+  .kartu-top img.logo{height:90px}
+  .nama-lembaga{background:var(--yellow);color:var(--navy);font-weight:800;font-size:1.1rem;border-radius:10px;padding:8px 16px;display:inline-block;text-align:center}
+  .info-lembaga{font-size:.78rem;color:#234;margin-top:6px;line-height:1.5}
+  .siswa-bar{display:flex;align-items:center;gap:14px;background:#eaf6ff;border:2px solid var(--blue);border-radius:14px;padding:10px 16px;margin:18px 0;flex-wrap:wrap}
+  .zoom-foto{cursor:zoom-in}
+  .siswa-foto{height:56px;width:56px;border-radius:50%;object-fit:cover;border:2px solid var(--navy);flex-shrink:0}
+  .siswa-foto-placeholder{height:56px;width:56px;border-radius:50%;background:#dbe8f4;color:#789;display:flex;align-items:center;justify-content:center;font-size:1.3rem;flex-shrink:0}
+  .siswa-field{font-weight:700;color:var(--navy);font-size:.95rem}
+  .siswa-field span{font-weight:400;border-bottom:1.5px solid var(--navy);padding:0 10px}
+  .paket-box{border:2.5px dashed var(--yellow);border-radius:14px;padding:12px 16px;margin-bottom:16px;display:flex;align-items:center;gap:16px;flex-wrap:wrap}
+  .spp-bulanan{background:var(--navy);color:#fff;font-weight:800;border-radius:30px;padding:8px 20px;font-size:1rem}
+  .pilihan-label{background:var(--yellow);color:var(--navy);font-weight:700;border-radius:8px;padding:4px 10px;font-size:.78rem}
+  .paket-list{display:flex;flex-direction:column;gap:4px;font-size:.82rem;font-weight:600}
+  .paket-list .item{display:flex;align-items:center;gap:6px}
+  .chk{display:inline-block;height:16px;width:16px;border:2px solid var(--navy);border-radius:3px;text-align:center;line-height:13px;font-size:.75rem;color:var(--navy);font-weight:900}
+  table{width:100%;border-collapse:collapse;font-size:.82rem}
+  th{background:var(--yellow);color:var(--navy);padding:8px 6px;border:1.5px solid var(--line);font-size:.85rem}
+  td{padding:7px 6px;border:1.5px solid var(--line);text-align:center}
+  td.no-col{background:#eaf6ff;font-weight:700;color:var(--navy)}
+  td.bulan-col{text-align:left;font-weight:700;color:var(--navy)}
+  .footer-tag{text-align:center;background:var(--yellow);color:var(--navy);font-weight:800;border-radius:10px;padding:10px;margin-top:18px;font-size:1rem}
+  .info-cetak{display:block;max-width:760px;margin:0 auto 14px;font-size:.78rem;color:#456;background:#fff;border:1.5px solid var(--line);border-radius:8px;padding:8px 12px}
+  /* ---------- Cetak: kertas A6 (105 x 148 mm), 1 kartu = 1 halaman ---------- */
+  @page{size:105mm 148mm;margin:5mm}
+  @media print{
+    *{-webkit-print-color-adjust:exact;print-color-adjust:exact}
+    .print-btn,.info-cetak{display:none !important}
+    .zoom-foto{cursor:auto}
+    html,body{background:#fff;padding:0;margin:0}
+    .kartu{max-width:none;width:calc(100% - 1mm);margin:0 auto 0 .5mm;padding:2.5mm;border:.35mm solid var(--navy);border-radius:2.5mm;
+           page-break-inside:avoid;break-inside:avoid;page-break-after:avoid;break-after:avoid}
+    .kartu-top{flex-wrap:nowrap;gap:2mm;align-items:center}
+    .kartu-top img.logo{height:14mm}
+    .nama-lembaga{font-size:7pt;padding:1mm 2.5mm;border-radius:2mm}
+    .info-lembaga{font-size:5pt;line-height:1.35;margin-top:1mm}
+    .siswa-bar{gap:2mm;padding:1.2mm 2.5mm;margin:2mm 0;border-width:.3mm;border-radius:2.5mm;flex-wrap:nowrap}
+    .siswa-foto,.siswa-foto-placeholder{height:10mm;width:10mm;border-width:.3mm;font-size:3.5mm}
+    .siswa-field{font-size:6.5pt}
+    .siswa-field span{padding:0 1.5mm;border-bottom-width:.25mm}
+    .paket-box{padding:1.5mm 2.5mm;margin-bottom:2mm;gap:2mm;border-width:.4mm;border-radius:2.5mm;flex-wrap:wrap}
+    .spp-bulanan{font-size:6.5pt;padding:1mm 3mm;border-radius:5mm;white-space:nowrap}
+    .pilihan-label{font-size:5.5pt;padding:.6mm 1.5mm;border-radius:1.5mm;white-space:nowrap}
+    .paket-list{font-size:5.5pt;gap:.6mm 3mm;display:grid;grid-auto-flow:column;grid-template-rows:repeat(4,auto)}
+    .paket-list .item{gap:1mm;white-space:nowrap}
+    .chk{height:2.6mm;width:2.6mm;border-width:.3mm;border-radius:.5mm;line-height:2mm;font-size:5pt}
+    table{font-size:6.5pt}
+    th{padding:1.2mm .8mm;border-width:.25mm;font-size:6.5pt}
+    td{padding:1.1mm .8mm;border-width:.25mm}
+    .footer-tag{margin-top:2mm;padding:1.3mm;font-size:7pt;border-radius:2mm}
+  }
+</style>
+</head>
+<body>
+  <button class="btn print-btn" onclick="window.print()" style="background:var(--yellow);color:var(--navy);border:none;padding:10px 16px;border-radius:8px;font-weight:700;cursor:pointer">🖨️ Print / Simpan sebagai PDF</button>
+  <div class="info-cetak">📄 Kartu ini otomatis dicetak di kertas <b>A6</b> (105 × 148 mm). Di jendela print pilih ukuran kertas <b>A6</b>, skala <b>100% / Default</b>, dan aktifkan <b>Background graphics</b> agar warna ikut tercetak.</div>
+
+  <div class="kartu">
+    <div class="kartu-top">
+      <img class="logo" src="{{ url_for('static', filename='logo_omahbocil.png') }}" alt="Logo">
+      <div style="text-align:right">
+        <div class="nama-lembaga">{{ info.nama }}</div>
+        <div class="info-lembaga">
+          📍 {{ info.alamat1 }}<br>{{ info.alamat2 }}<br>
+          👤 Contact Person : {{ info.cp }}<br>
+          📞 Phone - WA : {{ info.telp }}
+        </div>
+      </div>
+    </div>
+
+    <div class="siswa-bar">
+      {% if siswa.foto %}
+        <img class="siswa-foto zoom-foto" src="{{ url_for('static', filename='uploads/siswa/' + siswa.foto) }}" alt="Foto {{ siswa.nama }}">
+      {% else %}
+        <div class="siswa-foto-placeholder">👤</div>
+      {% endif %}
+      <div class="siswa-field">Nama Siswa : <span>{{ siswa.nama }}</span></div>
+      <div class="siswa-field">📅 Tahun : <span>{{ tahun }}</span></div>
+    </div>
+
+    <div class="paket-box">
+      <div class="spp-bulanan">SPP BULANAN</div>
+      <div class="pilihan-label">Pilihan Paket</div>
+      <div class="paket-list">
+        {% for p in packages %}
+        <div class="item">
+          <span class="chk">{{ '✓' if siswa.paket_id==p.id else '' }}</span>
+          {{ p.name }} : Rp {{ '{:,}'.format(p.price).replace(',', '.') }}/bln
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+
+    <table>
+      <thead><tr><th>No</th><th>Bulan</th><th>Iuran</th><th>TTD</th><th>Stempel</th></tr></thead>
+      <tbody>
+        {% for k in kartu %}
+        <tr>
+          <td class="no-col">{{ k.no }}</td>
+          <td class="bulan-col">{{ k.bulan }}</td>
+          <td>{{ ('Rp ' + '{:,}'.format(k.payment.jumlah).replace(',', '.')) if k.payment else '' }}</td>
+          <td>{{ k.payment.ttd if k.payment else '' }}</td>
+          <td>{{ k.payment.stempel if k.payment else '' }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+
+    <div class="footer-tag">{{ info.tagline }}</div>
+  </div>
+<script src="{{ url_for('static', filename='zoom.js') }}"></script>
+</body>
+</html>

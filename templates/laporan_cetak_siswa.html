@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Cetak Laporan Siswa</title>
+<link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+<style>
+  body{max-width:700px;margin:20px auto;padding:0 16px}
+  .cetak-header{display:flex;justify-content:space-between;align-items:flex-start;border-bottom:3px solid var(--navy);padding-bottom:10px;margin-bottom:16px}
+  .cetak-header h1{font-size:1.1rem;color:var(--navy);margin:0}
+  .cetak-header p{font-size:.75rem;color:#555;margin:2px 0 0}
+  .print-btn{margin-bottom:14px}
+  @media print{ .print-btn{display:none} body{margin:0;max-width:none} }
+</style>
+</head>
+<body>
+  <button class="btn yellow print-btn" onclick="window.print()">🖨️ Print / Simpan PDF</button>
+  <div class="cetak-header">
+    <div>
+      <h1>{{ info.nama }}</h1>
+      <p>{{ info.alamat1 }}<br>{{ info.alamat2 }}</p>
+      <p>CP: {{ info.cp }} · WA: {{ info.telp }}</p>
+    </div>
+    <img src="{{ url_for('static', filename='logo_omahbocil.png') }}" style="height:50px">
+  </div>
+  {% if not siswa %}
+    <p>Siswa tidak ditemukan.</p>
+  {% else %}
+  <h2 style="color:var(--navy);margin-bottom:0">Riwayat Pembayaran — {{ siswa.nama }}</h2>
+  <p style="font-size:.8rem;color:#666;margin-top:2px">No Akun: {{ siswa.no_akun }}{% if siswa.kelas %} · Kelas: {{ siswa.kelas }}{% endif %}</p>
+  <table>
+    <thead><tr><th>Bulan</th><th>Tahun</th><th>Jumlah</th><th>Tgl Bayar</th><th>TTD</th><th>Stempel</th></tr></thead>
+    <tbody>
+      {% if riwayat|length == 0 %}
+        <tr><td colspan="6">Belum ada riwayat pembayaran.</td></tr>
+      {% endif %}
+      {% for r in riwayat %}
+      <tr>
+        <td>{{ r.bulan }}</td><td>{{ r.tahun }}</td><td>{{ r.jumlah|rupiah }}</td>
+        <td>{{ r.tgl_bayar or '-' }}</td><td>{{ r.ttd or '-' }}</td><td>{{ r.stempel or '-' }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+    <tfoot><tr><th colspan="2">Total Dibayar</th><th colspan="4">{{ total|rupiah }}</th></tr></tfoot>
+  </table>
+  {% endif %}
+  <p style="font-size:.72rem;color:#888;margin-top:20px">Dicetak otomatis dari sistem SPP {{ info.nama }}.</p>
+</body>
+</html>

@@ -11,6 +11,7 @@
 <header>
 <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;flex-wrap:wrap">
   <div style="display:flex;align-items:center;gap:10px">
+    {% if current_admin %}<button type="button" class="menu-toggle" id="menuToggle" aria-label="Buka menu" aria-expanded="false">☰</button>{% endif %}
     <img src="{{ url_for('static', filename='logo_omahbocil.png') }}" alt="Logo Omah Bocil" style="height:56px;width:auto">
     <div>
       <h1>Omah Bocil — SPP Manager</h1>
@@ -28,7 +29,9 @@
   {% endif %}
 </div>
 </header>
+<div class="layout{{ ' has-sidebar' if current_admin }}">
 {% if current_admin %}
+<aside class="sidebar" id="sidebar">
 <nav>
 <a href="{{ url_for('dashboard') }}" class="{{ 'active' if active_tab=='dashboard' }}">Dashboard</a>
 <a href="{{ url_for('siswa_list') }}" class="{{ 'active' if active_tab=='siswa_list' }}">Siswa</a>
@@ -36,8 +39,11 @@
 <a href="{{ url_for('penerima_list') }}" class="{{ 'active' if active_tab=='penerima_list' }}">Penerima</a>
 <a href="{{ url_for('input_spp') }}" class="{{ 'active' if active_tab=='input_spp' }}">Input SPP</a>
 <a href="{{ url_for('laporan') }}" class="{{ 'active' if active_tab=='laporan' }}">Laporan</a>
+<a href="{{ url_for('cetak_spp_pilih') }}" class="{{ 'active' if active_tab in ['cetak_spp_pilih','cetak_spp_cetak'] }}">Cetak SPP</a>
 <a href="{{ url_for('riwayat') }}" class="{{ 'active' if active_tab=='riwayat' }}">Riwayat</a>
 </nav>
+</aside>
+<div class="sidebar-backdrop" id="sidebarBackdrop"></div>
 {% endif %}
 <main>
 {% with messages = get_flashed_messages(with_categories=true) %}
@@ -47,5 +53,18 @@
 {% endwith %}
 {% block content %}{% endblock %}
 </main>
+</div>
+<script src="{{ url_for('static', filename='zoom.js') }}"></script>
+<script>
+(function(){
+  var btn=document.getElementById('menuToggle'),sb=document.getElementById('sidebar'),bd=document.getElementById('sidebarBackdrop');
+  if(!btn||!sb)return;
+  function setOpen(o){document.body.classList.toggle('sidebar-open',o);btn.setAttribute('aria-expanded',o?'true':'false');}
+  btn.addEventListener('click',function(){setOpen(!document.body.classList.contains('sidebar-open'));});
+  if(bd)bd.addEventListener('click',function(){setOpen(false);});
+  sb.addEventListener('click',function(e){if(e.target.closest('a'))setOpen(false);});
+  document.addEventListener('keydown',function(e){if(e.key==='Escape')setOpen(false);});
+})();
+</script>
 </body>
 </html>

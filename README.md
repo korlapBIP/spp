@@ -22,7 +22,7 @@ cd spp-omahbocil
 python3 -m venv .venv
 source .venv/bin/activate      # Windows: .venv\Scripts\activate
 pip install -r requirements.txt
-python main.py
+python app.py
 ```
 
 Buka `http://127.0.0.1:5000` di browser. Database `spp_omahbocil.db` akan otomatis dibuat saat pertama kali dijalankan.
@@ -42,7 +42,7 @@ Password: admin123
 
 ```
 spp-omahbocil/
-├── main.py              # Routing Flask & logika aplikasi
+├── app.py               # Routing Flask & logika aplikasi
 ├── database.py          # Akses SQLite (semua query & CRUD)
 ├── requirements.txt
 ├── .gitignore

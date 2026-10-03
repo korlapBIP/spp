@@ -1,7 +1,7 @@
 """
 app.py
 Aplikasi web SPP Omah Bocil — Flask + SQLite.
-Jalankan dengan: python main.py
+Jalankan dengan: python app.py
 Lalu buka http://127.0.0.1:5000 di browser.
 """
 
@@ -22,10 +22,26 @@ import database as db
 
 app = Flask(__name__)
 # Di server produksi, atur SECRET_KEY lewat environment variable, jangan hardcode.
-app.secret_key = os.environ.get("SECRET_KEY", "dev-only-key")
+app.secret_key = os.environ.get("SECRET_KEY", "spp-omahbocil-secret-key-ganti-ini")
 
 MONTHS = ["Januari", "Februari", "Maret", "April", "Mei", "Juni", "Juli",
           "Agustus", "September", "Oktober", "November", "Desember"]
+
+# Info lembaga untuk kop surat / kartu cetak. Ganti di sini kalau datanya berubah.
+BIMBEL_INFO = {
+    "nama": "BIMBINGAN BELAJAR OMAH BOCIL",
+    "alamat1": "Jalan Kejaksaan 1 No 412 RT 06 / RW 02",
+    "alamat2": "Kel Sukorejo , Kec. Buduran, Kab. Sidoarjo",
+    "cp": "Indah",
+    "telp": "0851-5661-5592",
+    "tagline": "Teman Belajar, Raih Prestasi!",
+}
+
+
+def hitung_usia(tahun_lahir):
+    if not tahun_lahir:
+        return None
+    return date.today().year - tahun_lahir
 
 # --- Upload foto siswa ---
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -55,6 +71,35 @@ def save_foto_siswa(file_storage):
 # --- Riwayat perubahan aplikasi (changelog) ---
 # Tambahkan entri baru di urutan paling atas setiap kali ada update.
 CHANGELOG = [
+    {
+        "tanggal": "2026-10-03",
+        "judul": "Cetak Kartu SPP otomatis ukuran kertas A6",
+        "detail": [
+            "Menu Cetak SPP kini mencetak kartu pada kertas A6 (105 x 148 mm), 1 kartu = 1 halaman.",
+            "Tata letak kartu dipadatkan khusus saat dicetak; tampilan di layar tidak berubah.",
+        ],
+    },
+    {
+        "tanggal": "2026-10-03",
+        "judul": "Menu sidebar kiri, zoom foto siswa, dan penyesuaian deploy",
+        "detail": [
+            "Menu navigasi kini tampil sebagai sidebar di sisi kiri (di HP berupa slide yang dibuka lewat tombol ☰).",
+            "Foto siswa otomatis diperbesar saat kursor diarahkan ke foto (di HP: ketuk foto).",
+            "File utama aplikasi diganti nama dari main.py menjadi app.py.",
+            "Aplikasi membaca port dari environment variable PORT dan berjalan dengan debug dimatikan.",
+        ],
+    },
+    {
+        "tanggal": "2026-09-26",
+        "judul": "No akun otomatis, data siswa lebih lengkap, cetak laporan & kartu SPP",
+        "detail": [
+            "No Akun siswa baru terisi otomatis (format B001, B002, dst).",
+            "Format tanggal Mulai/Akhir jadi dd-mm-yyyy.",
+            "Form siswa tambah Asal Sekolah, Kelas, Tahun Lahir; Usia dihitung otomatis.",
+            "Tombol Cetak ditambahkan di 3 jenis Laporan (per Tahun, per Siswa, per Bulan).",
+            "Menu baru: Cetak SPP — cetak kartu SPP per siswa sesuai desain resmi, lengkap dengan foto siswa.",
+        ],
+    },
     {
         "tanggal": "2026-09-26",
         "judul": "Foto siswa, edit/hapus pembayaran, tampilan mobile, riwayat update",
@@ -123,6 +168,7 @@ def inject_globals():
         "MONTHS": MONTHS,
         "active_tab": request.endpoint,
         "current_admin": session.get("admin_username"),
+        "today_year": date.today().year,
     }
 
 
@@ -221,11 +267,14 @@ def dashboard():
 @login_required
 def siswa_list():
     students = db.get_all_students()
+    for s in students:
+        s["usia"] = hitung_usia(s.get("tahun_lahir"))
     packages = db.get_all_packages()
     edit_id = request.args.get("edit", type=int)
     edit_student = db.get_student(edit_id) if edit_id else None
+    next_no_akun = None if edit_student else db.get_next_no_akun()
     return render_template("siswa.html", students=students, packages=packages,
-                            edit_student=edit_student)
+                            edit_student=edit_student, next_no_akun=next_no_akun)
 
 
 @app.route("/siswa/save", methods=["POST"])
@@ -256,6 +305,9 @@ def siswa_save():
         "paket_id": request.form.get("paket_id", type=int),
         "jatuh_tempo": request.form.get("jatuh_tempo", type=int) or 10,
         "foto": foto_baru,  # None berarti foto lama dipertahankan (lihat update_student)
+        "asal_sekolah": request.form.get("asal_sekolah", "").strip() or None,
+        "kelas": request.form.get("kelas", "").strip() or None,
+        "tahun_lahir": request.form.get("tahun_lahir", type=int),
     }
     if student_id:
         db.update_student(student_id, data)
@@ -510,6 +562,108 @@ def laporan():
         status_bulan=status_bulan,
         total_bulan_terpilih=total_bulan_terpilih,
         lunas_count=lunas_count,
+    )
+
+
+@app.route("/laporan/cetak/tahun")
+@login_required
+def laporan_cetak_tahun():
+    today = date.today()
+    tahun = request.args.get("tahun", type=int) or today.year
+    payments = db.get_payments_for_year(tahun)
+    rows = []
+    grand_total = 0
+    for i, m in enumerate(MONTHS, start=1):
+        bulan_payments = [p for p in payments if p["bulan"] == i]
+        total = sum(p["jumlah"] for p in bulan_payments)
+        grand_total += total
+        rows.append({"bulan": m, "jumlah_bayar": len(bulan_payments), "total": total})
+    return render_template("laporan_cetak_tahun.html", tahun=tahun, rows=rows,
+                            grand_total=grand_total, info=BIMBEL_INFO)
+
+
+@app.route("/laporan/cetak/siswa")
+@login_required
+def laporan_cetak_siswa():
+    siswa_id = request.args.get("siswa_id", type=int)
+    siswa_terpilih = db.get_student(siswa_id) if siswa_id else None
+    riwayat_siswa = []
+    total_siswa = 0
+    if siswa_id:
+        for p in db.get_payments_for_student_all(siswa_id):
+            riwayat_siswa.append({
+                "bulan": MONTHS[p["bulan"] - 1],
+                "tahun": p["tahun"],
+                "jumlah": p["jumlah"],
+                "tgl_bayar": p["tgl_bayar"],
+                "ttd": p["ttd"],
+                "stempel": p["stempel"],
+            })
+            total_siswa += p["jumlah"]
+    return render_template("laporan_cetak_siswa.html", siswa=siswa_terpilih,
+                            riwayat=riwayat_siswa, total=total_siswa, info=BIMBEL_INFO)
+
+
+@app.route("/laporan/cetak/bulan")
+@login_required
+def laporan_cetak_bulan():
+    today = date.today()
+    lbulan = request.args.get("lbulan", type=int) or today.month
+    ltahun = request.args.get("ltahun", type=int) or today.year
+    status_bulan = []
+    total_bulan_terpilih = 0
+    lunas_count = 0
+    for s in db.get_active_students():
+        p = db.get_payment(s["id"], ltahun, lbulan)
+        status_bulan.append({
+            "no_akun": s["no_akun"], "nama": s["nama"],
+            "jumlah": p["jumlah"] if p else None,
+            "tgl_bayar": p["tgl_bayar"] if p else None,
+            "status": "Lunas" if p else "Belum",
+        })
+        if p:
+            lunas_count += 1
+            total_bulan_terpilih += p["jumlah"]
+    return render_template(
+        "laporan_cetak_bulan.html",
+        bulan_nama=MONTHS[lbulan - 1], tahun=ltahun, status_bulan=status_bulan,
+        total=total_bulan_terpilih, lunas_count=lunas_count, info=BIMBEL_INFO,
+    )
+
+
+# ---------------- CETAK SPP (KARTU CETAK PER SISWA) ----------------
+
+@app.route("/cetak-spp")
+@login_required
+def cetak_spp_pilih():
+    students = db.get_all_students()
+    today = date.today()
+    student_id = request.args.get("student_id", type=int)
+    tahun = request.args.get("tahun", type=int) or today.year
+    return render_template("cetak_spp_pilih.html", students=students, student_id=student_id, tahun=tahun)
+
+
+@app.route("/cetak-spp/cetak")
+@login_required
+def cetak_spp_cetak():
+    student_id = request.args.get("student_id", type=int)
+    today = date.today()
+    tahun = request.args.get("tahun", type=int) or today.year
+
+    siswa = db.get_student(student_id) if student_id else None
+    if not siswa:
+        flash("Pilih siswa terlebih dahulu.", "error")
+        return redirect(url_for("cetak_spp_pilih"))
+
+    packages = db.get_all_packages()
+    payments = {p["bulan"]: p for p in db.get_payments_for_student_year(student_id, tahun)}
+    kartu = []
+    for i, m in enumerate(MONTHS, start=1):
+        kartu.append({"no": i, "bulan": m, "payment": payments.get(i)})
+
+    return render_template(
+        "cetak_spp_cetak.html",
+        siswa=siswa, tahun=tahun, packages=packages, kartu=kartu, info=BIMBEL_INFO,
     )
 
 

@@ -1,7 +1,10 @@
 {% extends "base.html" %}
 {% block content %}
 <div class="card">
-  <h2>📈 Laporan Keuangan per Tahun</h2>
+  <h2 style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap">
+    <span>📈 Laporan Keuangan per Tahun</span>
+    <a class="btn small" target="_blank" href="{{ url_for('laporan_cetak_tahun', tahun=tahun) }}">🖨️ Cetak</a>
+  </h2>
   <form method="get" action="{{ url_for('laporan') }}">
     <input type="hidden" name="siswa_id" value="{{ siswa_id or '' }}">
     <input type="hidden" name="lbulan" value="{{ lbulan }}">
@@ -31,7 +34,12 @@
 </div>
 
 <div class="card">
-  <h2>👤 Laporan atas Nama Siswa</h2>
+  <h2 style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap">
+    <span>👤 Laporan atas Nama Siswa</span>
+    {% if siswa_id %}
+    <a class="btn small" target="_blank" href="{{ url_for('laporan_cetak_siswa', siswa_id=siswa_id) }}">🖨️ Cetak</a>
+    {% endif %}
+  </h2>
   {% if all_students|length == 0 %}
     <p>Belum ada data siswa.</p>
   {% else %}
@@ -71,7 +79,10 @@
 </div>
 
 <div class="card">
-  <h2>🗓️ Laporan atas Nama Bulan</h2>
+  <h2 style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap">
+    <span>🗓️ Laporan atas Nama Bulan</span>
+    <a class="btn small" target="_blank" href="{{ url_for('laporan_cetak_bulan', lbulan=lbulan, ltahun=ltahun) }}">🖨️ Cetak</a>
+  </h2>
   <form method="get" action="{{ url_for('laporan') }}">
     <input type="hidden" name="tahun" value="{{ tahun }}">
     <input type="hidden" name="siswa_id" value="{{ siswa_id or '' }}">
