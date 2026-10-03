@@ -2,7 +2,7 @@
 {% block content %}
 <div class="card">
   <h2>➕ {{ 'Edit' if edit_student else 'Tambah' }} Siswa</h2>
-  <form method="post" action="{{ url_for('siswa_save') }}">
+  <form method="post" action="{{ url_for('siswa_save') }}" enctype="multipart/form-data">
     <input type="hidden" name="sid" value="{{ edit_student.id if edit_student else '' }}">
     <div class="row">
       <div><label>No Akun</label><input name="no_akun" required value="{{ edit_student.no_akun if edit_student else '' }}"></div>
@@ -27,6 +27,18 @@
       </div>
       <div><label>Tgl Jatuh Tempo (1-28)</label><input type="number" name="jatuh_tempo" min="1" max="28" value="{{ edit_student.jatuh_tempo if edit_student else 10 }}"></div>
     </div>
+    <div class="row" style="margin-top:8px">
+      <div>
+        <label>Foto Siswa {{ '(kosongkan jika tidak diganti)' if edit_student else '(opsional)' }}</label>
+        <input type="file" name="foto" accept="image/png,image/jpeg,image/gif,image/webp">
+      </div>
+      {% if edit_student and edit_student.foto %}
+      <div style="flex:0 0 auto">
+        <label>Foto saat ini</label>
+        <img src="{{ url_for('static', filename='uploads/siswa/' + edit_student.foto) }}" alt="Foto {{ edit_student.nama }}" style="height:64px;width:64px;object-fit:cover;border-radius:8px;border:1.5px solid var(--line)">
+      </div>
+      {% endif %}
+    </div>
     <div style="margin-top:8px">
       <button class="btn yellow" type="submit">Simpan</button>
       <a class="btn" href="{{ url_for('siswa_list') }}">Batal</a>
@@ -37,10 +49,17 @@
   <h2>👦 Daftar Siswa</h2>
   <div class="tbl-wrap">
     <table>
-      <thead><tr><th>No Akun</th><th>Nama</th><th>Status</th><th>Paket</th><th>Iuran</th><th>Jatuh Tempo</th><th></th></tr></thead>
+      <thead><tr><th>Foto</th><th>No Akun</th><th>Nama</th><th>Status</th><th>Paket</th><th>Iuran</th><th>Jatuh Tempo</th><th></th></tr></thead>
       <tbody>
         {% for s in students %}
         <tr>
+          <td>
+            {% if s.foto %}
+              <img src="{{ url_for('static', filename='uploads/siswa/' + s.foto) }}" alt="Foto {{ s.nama }}" style="height:36px;width:36px;object-fit:cover;border-radius:50%;border:1.5px solid var(--line)">
+            {% else %}
+              <span style="display:inline-flex;align-items:center;justify-content:center;height:36px;width:36px;border-radius:50%;background:var(--bg);color:#9ab;font-size:.9rem">👤</span>
+            {% endif %}
+          </td>
           <td>{{ s.no_akun }}</td><td>{{ s.nama }}</td><td>{{ s.status }}</td>
           <td>{{ s.paket_name or '-' }}</td>
           <td>{{ ('Rp ' + '{:,}'.format(s.paket_price).replace(',', '.')) if s.paket_price is not none else '-' }}</td>

@@ -9,12 +9,14 @@ import csv
 import io
 import json
 import os
+import uuid
 from datetime import date, datetime
 from functools import wraps
 
 from flask import (Flask, render_template, request, redirect, url_for,
                     flash, Response, session)
 from werkzeug.security import generate_password_hash, check_password_hash
+from werkzeug.utils import secure_filename
 
 import database as db
 
@@ -24,6 +26,71 @@ app.secret_key = os.environ.get("SECRET_KEY", "spp-omahbocil-secret-key-ganti-in
 
 MONTHS = ["Januari", "Februari", "Maret", "April", "Mei", "Juni", "Juli",
           "Agustus", "September", "Oktober", "November", "Desember"]
+
+# --- Upload foto siswa ---
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+UPLOAD_FOLDER = os.path.join(BASE_DIR, "static", "uploads", "siswa")
+ALLOWED_EXT = {"png", "jpg", "jpeg", "gif", "webp"}
+os.makedirs(UPLOAD_FOLDER, exist_ok=True)
+app.config["MAX_CONTENT_LENGTH"] = 3 * 1024 * 1024  # maksimal 3MB per upload
+
+
+def allowed_file(filename):
+    return "." in filename and filename.rsplit(".", 1)[1].lower() in ALLOWED_EXT
+
+
+def save_foto_siswa(file_storage):
+    """Simpan file foto yang diupload, kembalikan nama file tersimpan atau None."""
+    if not file_storage or file_storage.filename == "":
+        return None
+    if not allowed_file(file_storage.filename):
+        flash("Format foto tidak didukung. Gunakan PNG, JPG, GIF, atau WEBP.", "error")
+        return None
+    ext = secure_filename(file_storage.filename).rsplit(".", 1)[1].lower()
+    new_name = f"{uuid.uuid4().hex}.{ext}"
+    file_storage.save(os.path.join(UPLOAD_FOLDER, new_name))
+    return new_name
+
+
+# --- Riwayat perubahan aplikasi (changelog) ---
+# Tambahkan entri baru di urutan paling atas setiap kali ada update.
+CHANGELOG = [
+    {
+        "tanggal": "2026-09-26",
+        "judul": "Foto siswa, edit/hapus pembayaran, tampilan mobile, riwayat update",
+        "detail": [
+            "Form data siswa kini bisa unggah foto siswa.",
+            "Kartu SPP bulanan kini punya tombol Edit dan Hapus per baris pembayaran.",
+            "Tampilan dirapikan agar lebih nyaman dibuka dari HP.",
+            "Menu Riwayat ditambahkan untuk mencatat histori pembaruan aplikasi.",
+        ],
+    },
+    {
+        "tanggal": "2026-09-26",
+        "judul": "Login admin & penerima iuran SPP",
+        "detail": [
+            "Login admin ditambahkan, seluruh halaman kini butuh login.",
+            "Menu Ganti Password untuk admin.",
+            "CRUD Penerima Iuran SPP, muncul sebagai saran di kolom TTD Input SPP.",
+            "Logo Omah Bocil dipasang di header & favicon.",
+        ],
+    },
+    {
+        "tanggal": "2026-09-25",
+        "judul": "Laporan per siswa & per bulan",
+        "detail": [
+            "Laporan > atas nama siswa: riwayat pembayaran lengkap 1 siswa.",
+            "Laporan > atas nama bulan: status lunas/belum semua siswa aktif di 1 bulan.",
+        ],
+    },
+    {
+        "tanggal": "2026-09-25",
+        "judul": "Rilis awal",
+        "detail": [
+            "Aplikasi SPP Omah Bocil pertama kali dibuat: dashboard, siswa, paket, input SPP, laporan per tahun, export CSV/JSON.",
+        ],
+    },
+]
 
 DEFAULT_ADMIN_USERNAME = "admin"
 DEFAULT_ADMIN_PASSWORD = "admin123"
@@ -173,6 +240,13 @@ def siswa_save():
         flash("No Akun sudah dipakai siswa lain.", "error")
         return redirect(url_for("siswa_list"))
 
+    foto_lama = None
+    if student_id:
+        existing = db.get_student(student_id)
+        foto_lama = existing["foto"] if existing else None
+
+    foto_baru = save_foto_siswa(request.files.get("foto"))
+
     data = {
         "no_akun": no_akun,
         "nama": nama,
@@ -181,9 +255,15 @@ def siswa_save():
         "akhir": request.form.get("akhir") or None,
         "paket_id": request.form.get("paket_id", type=int),
         "jatuh_tempo": request.form.get("jatuh_tempo", type=int) or 10,
+        "foto": foto_baru,  # None berarti foto lama dipertahankan (lihat update_student)
     }
     if student_id:
         db.update_student(student_id, data)
+        # hapus file foto lama dari disk kalau diganti dengan foto baru
+        if foto_baru and foto_lama:
+            old_path = os.path.join(UPLOAD_FOLDER, foto_lama)
+            if os.path.exists(old_path):
+                os.remove(old_path)
         flash("Data siswa berhasil diperbarui.", "success")
     else:
         db.add_student(data)
@@ -194,6 +274,11 @@ def siswa_save():
 @app.route("/siswa/hapus/<int:student_id>", methods=["POST"])
 @login_required
 def siswa_hapus(student_id):
+    existing = db.get_student(student_id)
+    if existing and existing.get("foto"):
+        foto_path = os.path.join(UPLOAD_FOLDER, existing["foto"])
+        if os.path.exists(foto_path):
+            os.remove(foto_path)
     db.delete_student(student_id)
     flash("Siswa dihapus. Riwayat pembayarannya juga ikut terhapus.", "success")
     return redirect(url_for("siswa_list"))
@@ -295,6 +380,14 @@ def input_spp():
     if selected_student and selected_student.get("paket_price") is not None:
         jumlah_default = selected_student["paket_price"]
 
+    # Jika datang dari tombol "Edit" pada kartu SPP, isi ulang form dengan data lama
+    edit_bulan = request.args.get("edit_bulan", type=int)
+    edit_payment = None
+    if edit_bulan and student_id:
+        edit_payment = db.get_payment(student_id, tahun, edit_bulan)
+        if edit_payment:
+            jumlah_default = edit_payment["jumlah"]
+
     return render_template(
         "input_spp.html",
         students=students,
@@ -305,6 +398,8 @@ def input_spp():
         today=today.isoformat(),
         jumlah_default=jumlah_default,
         recipients=db.get_all_recipients(),
+        edit_bulan=edit_bulan,
+        edit_payment=edit_payment,
     )
 
 
@@ -321,6 +416,20 @@ def input_spp_save():
 
     db.upsert_payment(student_id, bulan, tahun, jumlah, tgl_bayar, ttd, stempel)
     flash("Pembayaran SPP berhasil disimpan.", "success")
+    return redirect(url_for("input_spp", student_id=student_id, tahun=tahun))
+
+
+@app.route("/input-spp/hapus/<int:payment_id>", methods=["POST"])
+@login_required
+def input_spp_hapus(payment_id):
+    payment = db.get_payment_by_id(payment_id)
+    if not payment:
+        flash("Data pembayaran tidak ditemukan.", "error")
+        return redirect(url_for("input_spp"))
+    student_id = payment["student_id"]
+    tahun = payment["tahun"]
+    db.delete_payment(payment_id)
+    flash("Data pembayaran berhasil dihapus.", "success")
     return redirect(url_for("input_spp", student_id=student_id, tahun=tahun))
 
 
@@ -439,6 +548,14 @@ def export_json():
         mimetype="application/json",
         headers={"Content-Disposition": "attachment;filename=database-spp-omahbocil.json"},
     )
+
+
+# ---------------- RIWAYAT (CHANGELOG APLIKASI) ----------------
+
+@app.route("/riwayat")
+@login_required
+def riwayat():
+    return render_template("riwayat.html", changelog=CHANGELOG)
 
 
 if __name__ == "__main__":

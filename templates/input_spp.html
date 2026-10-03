@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 {% block content %}
 <div class="card">
-  <h2>💰 Input Pembayaran SPP</h2>
+  <h2>💰 {{ 'Edit' if edit_payment else 'Input' }} Pembayaran SPP</h2>
   {% if students|length == 0 %}
     <p>Belum ada siswa aktif. Tambahkan siswa dahulu di tab Siswa.</p>
   {% else %}
@@ -22,14 +22,20 @@
     </div>
   </form>
 
+  {% if edit_payment %}
+  <div class="flash success" style="margin-top:10px">Mengedit pembayaran bulan {{ MONTHS[edit_bulan - 1] }} {{ tahun }}.
+    <a href="{{ url_for('input_spp', student_id=student_id, tahun=tahun) }}" style="color:var(--green);font-weight:700">Batal edit</a>
+  </div>
+  {% endif %}
+
   <form method="post" action="{{ url_for('input_spp_save') }}" style="margin-top:10px">
     <input type="hidden" name="student_id" value="{{ student_id }}">
     <div class="row">
       <div>
         <label>Bulan</label>
-        <select name="bulan">
+        <select name="bulan" id="bulanSelect">
           {% for m in MONTHS %}
-            <option value="{{ loop.index }}">{{ m }}</option>
+            <option value="{{ loop.index }}" {{ 'selected' if edit_bulan==loop.index }}>{{ m }}</option>
           {% endfor %}
         </select>
       </div>
@@ -37,20 +43,25 @@
       <div><label>Jumlah Iuran</label><input name="jumlah" type="number" value="{{ jumlah_default }}"></div>
     </div>
     <div class="row">
-      <div><label>Tgl Bayar</label><input name="tgl_bayar" type="date" value="{{ today }}"></div>
+      <div><label>Tgl Bayar</label><input name="tgl_bayar" type="date" value="{{ edit_payment.tgl_bayar if edit_payment else today }}"></div>
       <div>
         <label>TTD (Penerima)</label>
-        <input name="ttd" list="daftarPenerima" placeholder="pilih atau ketik nama penerima" autocomplete="off">
+        <input name="ttd" list="daftarPenerima" placeholder="pilih atau ketik nama penerima" autocomplete="off" value="{{ edit_payment.ttd if edit_payment else '' }}">
         <datalist id="daftarPenerima">
           {% for r in recipients %}
             <option value="{{ r.nama }}">{{ r.jabatan or '' }}</option>
           {% endfor %}
         </datalist>
       </div>
-      <div><label>Stempel</label><select name="stempel"><option>Ya</option><option>Belum</option></select></div>
+      <div><label>Stempel</label>
+        <select name="stempel">
+          <option {{ 'selected' if edit_payment and edit_payment.stempel=='Ya' }}>Ya</option>
+          <option {{ 'selected' if not edit_payment or edit_payment.stempel=='Belum' }}>Belum</option>
+        </select>
+      </div>
     </div>
     <div style="margin-top:8px">
-      <button class="btn yellow" type="submit">Simpan Pembayaran</button>
+      <button class="btn yellow" type="submit">{{ 'Update Pembayaran' if edit_payment else 'Simpan Pembayaran' }}</button>
       <a class="btn small" href="{{ url_for('penerima_list') }}" style="margin-left:6px">Kelola Daftar Penerima</a>
     </div>
   </form>
@@ -62,7 +73,7 @@
   <h2>📋 Kartu SPP Bulanan — {{ selected_student.nama }} ({{ tahun }})</h2>
   <div class="tbl-wrap">
     <table>
-      <thead><tr><th>No</th><th>Bulan</th><th>Iuran</th><th>TTD</th><th>Stempel</th><th>Status</th></tr></thead>
+      <thead><tr><th>No</th><th>Bulan</th><th>Iuran</th><th>TTD</th><th>Stempel</th><th>Status</th><th></th></tr></thead>
       <tbody>
         {% for k in kartu %}
         <tr>
@@ -71,6 +82,14 @@
           <td>{{ k.payment.ttd if k.payment else '' }}</td>
           <td>{{ k.payment.stempel if k.payment else '' }}</td>
           <td>{% if k.payment %}<span class="badge ok">Lunas</span>{% else %}<span class="badge no">Belum</span>{% endif %}</td>
+          <td style="white-space:nowrap">
+            {% if k.payment %}
+              <a class="btn small" href="{{ url_for('input_spp', student_id=student_id, tahun=tahun, edit_bulan=k.no) }}">Edit</a>
+              <form method="post" action="{{ url_for('input_spp_hapus', payment_id=k.payment.id) }}" style="display:inline" onsubmit="return confirm('Hapus data pembayaran bulan {{ k.bulan }}?');">
+                <button class="btn small red" type="submit">Hapus</button>
+              </form>
+            {% endif %}
+          </td>
         </tr>
         {% endfor %}
       </tbody>

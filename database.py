@@ -81,6 +81,12 @@ def init_db():
             )
         """)
 
+        # --- Migrasi skema: tambah kolom baru tanpa menghapus data lama ---
+        cur.execute("PRAGMA table_info(students)")
+        existing_cols = {row["name"] for row in cur.fetchall()}
+        if "foto" not in existing_cols:
+            cur.execute("ALTER TABLE students ADD COLUMN foto TEXT")
+
 
 # ---------------- PACKAGES ----------------
 
@@ -154,20 +160,30 @@ def find_student_by_no_akun(no_akun, exclude_id=None):
 def add_student(data):
     with get_cursor(commit=True) as cur:
         cur.execute("""
-            INSERT INTO students (no_akun, nama, status, mulai, akhir, paket_id, jatuh_tempo)
-            VALUES (?, ?, ?, ?, ?, ?, ?)
+            INSERT INTO students (no_akun, nama, status, mulai, akhir, paket_id, jatuh_tempo, foto)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
         """, (data["no_akun"], data["nama"], data["status"], data.get("mulai"),
-              data.get("akhir"), data.get("paket_id") or None, data["jatuh_tempo"]))
+              data.get("akhir"), data.get("paket_id") or None, data["jatuh_tempo"],
+              data.get("foto")))
         return cur.lastrowid
 
 
 def update_student(student_id, data):
     with get_cursor(commit=True) as cur:
-        cur.execute("""
-            UPDATE students SET no_akun=?, nama=?, status=?, mulai=?, akhir=?, paket_id=?, jatuh_tempo=?
-            WHERE id = ?
-        """, (data["no_akun"], data["nama"], data["status"], data.get("mulai"),
-              data.get("akhir"), data.get("paket_id") or None, data["jatuh_tempo"], student_id))
+        if data.get("foto") is not None:
+            cur.execute("""
+                UPDATE students SET no_akun=?, nama=?, status=?, mulai=?, akhir=?, paket_id=?, jatuh_tempo=?, foto=?
+                WHERE id = ?
+            """, (data["no_akun"], data["nama"], data["status"], data.get("mulai"),
+                  data.get("akhir"), data.get("paket_id") or None, data["jatuh_tempo"],
+                  data.get("foto"), student_id))
+        else:
+            # foto tidak diganti, pertahankan foto lama
+            cur.execute("""
+                UPDATE students SET no_akun=?, nama=?, status=?, mulai=?, akhir=?, paket_id=?, jatuh_tempo=?
+                WHERE id = ?
+            """, (data["no_akun"], data["nama"], data["status"], data.get("mulai"),
+                  data.get("akhir"), data.get("paket_id") or None, data["jatuh_tempo"], student_id))
 
 
 def delete_student(student_id):
@@ -193,6 +209,18 @@ def get_payment(student_id, tahun, bulan):
         """, (student_id, tahun, bulan))
         row = cur.fetchone()
         return dict(row) if row else None
+
+
+def get_payment_by_id(payment_id):
+    with get_cursor() as cur:
+        cur.execute("SELECT * FROM payments WHERE id = ?", (payment_id,))
+        row = cur.fetchone()
+        return dict(row) if row else None
+
+
+def delete_payment(payment_id):
+    with get_cursor(commit=True) as cur:
+        cur.execute("DELETE FROM payments WHERE id = ?", (payment_id,))
 
 
 def get_payments_for_student_year(student_id, tahun):
